@@ -3,7 +3,7 @@ export
 
 COMPOSE := docker compose
 
-.PHONY: db-up db-down db-reset proxy-up proxy-down \
+.PHONY: db-up db-down db-reset db-proxy-up db-proxy-down \
         migrate-create migrate-up migrate-down migrate-action
 
 db-up:
@@ -36,7 +36,7 @@ migrate-create:
 	docker compose run --rm --user $(shell id -u):$(shell id -g) migrate \
     	create \
     	-ext sql \
-    	-path /migrations \
+    	-dir /migrations \
     	-seq "$(seq)"
 
 migrate-up:
