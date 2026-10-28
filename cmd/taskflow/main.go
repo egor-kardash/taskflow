@@ -12,5 +12,5 @@ func main() {
 	flag.StringVar(&configPath, "config", os.Getenv("CONFIG_PATH"), "path to config file")
 	flag.Parse()
 
-	cfg := config.MustLoad(configPath)
+	config.MustLoad(configPath)
 }
