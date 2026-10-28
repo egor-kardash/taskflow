@@ -3,14 +3,17 @@ export
 
 COMPOSE := docker compose
 
-.PHONY: db-up db-down db-reset db-proxy-up db-proxy-down \
+.PHONY: app-run db-up db-down db-reset db-proxy-up db-proxy-down \
         migrate-create migrate-up migrate-down migrate-action
+
+app-run:
+	@go run ./cmd/taskflow --config=./config/config.yml
 
 db-up:
 	@$(COMPOSE) up -d db
 
 db-down:
-	@$(COMPOSE) down db
+	@$(COMPOSE) stop db
 
 db-reset:
 	@read -p "Delete the environment's volumes and all DB data? Data will be reset. [y/N]: " ans; \
@@ -25,7 +28,7 @@ db-proxy-up:
 	@$(COMPOSE) up -d db-proxy
 
 db-proxy-down:
-	@$(COMPOSE) down db-proxy
+	@$(COMPOSE) stop db-proxy
 
 migrate-create:
 	@if [ -z "$(seq)" ]; then \
@@ -52,5 +55,5 @@ migrate-action:
 	fi; \
 	docker compose run --rm migrate \
 	-path /migrations \
-	-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable \
+	-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE} \
 	"$(action)"
