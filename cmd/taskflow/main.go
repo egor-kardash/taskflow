@@ -14,6 +14,7 @@ import (
 
 	"github.com/egor-kardash/taskflow/app"
 	"github.com/egor-kardash/taskflow/internal/config"
+	"github.com/egor-kardash/taskflow/internal/share/logger"
 )
 
 func main() {
@@ -32,13 +33,19 @@ func run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	appLog, err := logger.New(cfg.Log.Level, cfg.Log.Format)
+	if err != nil {
+		return fmt.Errorf("init logger: %w", err)
+	}
+	slog.SetDefault(appLog)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	startCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	a, err := app.New(startCtx, cfg)
+	a, err := app.New(startCtx, cfg, appLog)
 	if err != nil {
 		return err
 	}
@@ -46,12 +53,12 @@ func run() error {
 		err = errors.Join(err, a.Close())
 	}()
 
-	slog.Info("connected to postgres",
+	appLog.Info("connected to postgres",
 		"host", cfg.Database.Host,
 		"port", cfg.Database.Port,
 		"db", cfg.Database.Name,
 	)
-	slog.Info("app started, press Ctrl+C to stop")
+	appLog.Info("app started, press Ctrl+C to stop")
 
 	return a.Run(ctx)
 }
