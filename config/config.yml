@@ -1,4 +1,9 @@
 env: "local" # local, dev, prod
+
+log:
+  level: info   # debug, info, warn, error
+  format: text  # text - local, json - dev/prod
+
 http_server:
   address: "localhost:8080"
   timeout: 5s

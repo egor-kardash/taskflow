@@ -15,12 +15,18 @@ type Config struct {
 	Env        string     `yaml:"env" env:"ENV" env-default:"local"`
 	HTTPServer HTTPServer `yaml:"http_server"`
 	Database   DBConfig   `yaml:"database"`
+	Log        LogConfig  `yaml:"log"`
 }
 
 type HTTPServer struct {
 	Address     string        `yaml:"address" env-default:"localhost:8080"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"5s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+}
+
+type LogConfig struct {
+	Level  string `yaml:"level" env:"LOG_LEVEL" env-default:"info"`
+	Format string `yaml:"format" env:"LOG_FORMAT" env-default:"text"`
 }
 
 type DBConfig struct {
