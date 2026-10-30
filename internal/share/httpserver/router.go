@@ -24,6 +24,13 @@ func NewRouter(log *slog.Logger, db Pinger) http.Handler {
 	r.Use(RequestLogger(log))
 	r.Use(Recoverer(log))
 
+	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
+		WriteError(w, http.StatusNotFound, "not_found", "resource not found")
+	})
+	r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
+		WriteError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+	})
+
 	r.Get("/healthz", healthz)
 	r.Get("/readyz", readyz(log, db))
 
@@ -41,7 +48,7 @@ func readyz(log *slog.Logger, db Pinger) http.HandlerFunc {
 
 		if err := db.Ping(ctx); err != nil {
 			log.Debug("readiness check failed", "error", err)
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
+			WriteError(w, http.StatusServiceUnavailable, "database_unavailable", "database is not reachable")
 			return
 		}
 
