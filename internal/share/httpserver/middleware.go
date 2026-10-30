@@ -38,6 +38,8 @@ func RequestLogger(log *slog.Logger) func(http.Handler) http.Handler {
 func Recoverer(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
 			defer func() {
 				rec := recover()
 				if rec == nil {
@@ -53,10 +55,14 @@ func Recoverer(log *slog.Logger) func(http.Handler) http.Handler {
 					"stack", string(debug.Stack()),
 				)
 
-				WriteError(w, http.StatusInternalServerError, "internal_error", "internal server error")
+				if ww.Status() != 0 {
+					panic(http.ErrAbortHandler)
+				}
+
+				WriteError(ww, http.StatusInternalServerError, "internal_error", "internal server error")
 			}()
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(ww, r)
 		})
 	}
 }
