@@ -2,17 +2,23 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"time"
 
 	"github.com/egor-kardash/taskflow/internal/config"
+	"github.com/egor-kardash/taskflow/internal/share/httpserver"
 	"github.com/egor-kardash/taskflow/internal/share/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type App struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	pool            *pgxpool.Pool
+	log             *slog.Logger
+	server          *http.Server
+	shutdownTimeout time.Duration
 }
 
 func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error) {
@@ -21,16 +27,43 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
+	handler := httpserver.NewRouter(log, pool)
+	server := httpserver.New(cfg.HTTPServer, handler, log)
+
 	return &App{
-		pool: pool,
-		log:  log,
+		pool:            pool,
+		log:             log,
+		server:          server,
+		shutdownTimeout: cfg.HTTPServer.ShutdownTimeout,
 	}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
-	<-ctx.Done()
-	a.log.Info("shutting down")
-	return nil
+	serveErr := make(chan error, 1)
+
+	go func() {
+		a.log.Info("http server listening", "addr", a.server.Addr)
+		serveErr <- a.server.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.shutdownTimeout)
+		defer cancel()
+
+		if err := a.server.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("shutdown http server: %w", err)
+		}
+
+		a.log.Info("http server stopped")
+		return nil
+
+	case err := <-serveErr:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("serve http: %w", err)
+	}
 }
 
 func (a *App) Close() error {
