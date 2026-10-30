@@ -53,7 +53,7 @@ func Recoverer(log *slog.Logger) func(http.Handler) http.Handler {
 					"stack", string(debug.Stack()),
 				)
 
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				WriteError(w, http.StatusInternalServerError, "internal_error", "internal server error")
 			}()
 
 			next.ServeHTTP(w, r)
