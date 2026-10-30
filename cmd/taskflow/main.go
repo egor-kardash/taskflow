@@ -23,7 +23,7 @@ func main() {
 	}
 }
 
-func run() error {
+func run() (err error) {
 	var configPath string
 	flag.StringVar(&configPath, "config", os.Getenv("CONFIG_PATH"), "path to config file")
 	flag.Parse()
@@ -58,7 +58,6 @@ func run() error {
 		"port", cfg.Database.Port,
 		"db", cfg.Database.Name,
 	)
-	appLog.Info("app started, press Ctrl+C to stop")
 
 	return a.Run(ctx)
 }

@@ -31,3 +31,18 @@ func TestRequestLoggerPassesThrough(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusTeapot)
 	}
 }
+
+func TestRecovererAbortsWhenHeadersSent(t *testing.T) {
+	handler := Recoverer(newTestLogger())(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		panic("late boom")
+	}))
+
+	defer func() {
+		if rec := recover(); rec != http.ErrAbortHandler {
+			t.Fatalf("panic = %v, want http.ErrAbortHandler", rec)
+		}
+	}()
+
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+}
