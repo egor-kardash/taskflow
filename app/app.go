@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -39,11 +40,17 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 }
 
 func (a *App) Run(ctx context.Context) error {
+	ln, err := net.Listen("tcp", a.server.Addr)
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", a.server.Addr, err)
+	}
+
+	a.log.Info("http server listening", "addr", ln.Addr().String())
+
 	serveErr := make(chan error, 1)
 
 	go func() {
-		a.log.Info("http server listening", "addr", a.server.Addr)
-		serveErr <- a.server.ListenAndServe()
+		serveErr <- a.server.Serve(ln)
 	}()
 
 	select {
@@ -52,6 +59,7 @@ func (a *App) Run(ctx context.Context) error {
 		defer cancel()
 
 		if err := a.server.Shutdown(shutdownCtx); err != nil {
+			_ = a.server.Close()
 			return fmt.Errorf("shutdown http server: %w", err)
 		}
 
