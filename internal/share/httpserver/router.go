@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(log *slog.Logger, db Pinger) http.Handler {
+func NewRouter(log *slog.Logger, db Pinger) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
