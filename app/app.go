@@ -9,6 +9,10 @@ import (
 	"net/http"
 	"time"
 
+	userspostgres "github.com/egor-kardash/taskflow/internal/features/users/repository/postgres"
+	usersservice "github.com/egor-kardash/taskflow/internal/features/users/service"
+	usershttp "github.com/egor-kardash/taskflow/internal/features/users/transport/http"
+
 	"github.com/egor-kardash/taskflow/internal/config"
 	"github.com/egor-kardash/taskflow/internal/share/httpserver"
 	"github.com/egor-kardash/taskflow/internal/share/postgres"
@@ -28,8 +32,14 @@ func New(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
-	handler := httpserver.NewRouter(log, pool)
-	server := httpserver.New(cfg.HTTPServer, handler, log)
+	userRepo := userspostgres.New(pool)
+	userService := usersservice.New(userRepo)
+	userHandler := usershttp.New(userService, log)
+
+	router := httpserver.NewRouter(log, pool)
+	userHandler.Register(router)
+
+	server := httpserver.New(cfg.HTTPServer, router, log)
 
 	return &App{
 		pool:            pool,
